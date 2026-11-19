@@ -13,7 +13,7 @@ useEffect(()=>{localStorage.setItem('gdn_geo_positions',JSON.stringify(positions
 useEffect(()=>{
  if(!mapRef.current||mapObj.current)return;
  const map=L.map(mapRef.current,{center:[3.9000,73.4667],zoom:16,zoomControl:true});
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22,maxNativeZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
  map.on('click',e=>{const code=activeRef.current;setPositions(old=>({...old,[code]:{lat:+e.latlng.lat.toFixed(7),lng:+e.latlng.lng.toFixed(7)}}));setGpsMessage('Map position saved for '+code);setGpsAccuracy(null)});
  mapObj.current=map;
  return()=>{map.remove();mapObj.current=null;layersRef.current={}};
