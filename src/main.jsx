@@ -8,13 +8,13 @@ function App(){const[page,setPage]=useState('Overview'),[query,setQuery]=useStat
 </section></main></div>}
 function GeoMapWorkspace(){
 const [active,setActive]=useState(installed[0]),[positions,setPositions]=useState(()=>JSON.parse(localStorage.getItem('gdn_geo_positions')||'{}'));
-const mapRef=useRef(null),mapObj=useRef(null),layersRef=useRef({});
-useEffect(()=>{localStorage.setItem('gdn_geo_positions',JSON.stringify(positions))},[positions]);
+const mapRef=useRef(null),mapObj=useRef(null),layersRef=useRef({}),activeRef=useRef(active);
+useEffect(()=>{localStorage.setItem('gdn_geo_positions',JSON.stringify(positions))},[positions]);useEffect(()=>{activeRef.current=active},[active]);
 useEffect(()=>{
  if(!mapRef.current||mapObj.current)return;
  const map=L.map(mapRef.current,{center:[3.9000,73.4667],zoom:16,zoomControl:true});
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
- map.on('click',e=>setPositions(old=>({...old,[active]:{lat:+e.latlng.lat.toFixed(7),lng:+e.latlng.lng.toFixed(7)}})));
+ map.on('click',e=>{const code=activeRef.current;setPositions(old=>({...old,[code]:{lat:+e.latlng.lat.toFixed(7),lng:+e.latlng.lng.toFixed(7)}}))});
  mapObj.current=map;
  return()=>{map.remove();mapObj.current=null;layersRef.current={}};
 },[]);
@@ -24,12 +24,10 @@ useEffect(()=>{
  records.forEach(r=>{
   const p=positions[r.code];if(!p)return;
   const color=r.status==='Planned'?'#d39a36':'#168d77';
-  const marker=L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:3,fillColor:color,fillOpacity:1}).addTo(map);
-  marker.bindTooltip(r.code,{permanent:true,direction:'right',offset:[9,0],className:'db-map-label'});
+  const marker=L.marker([p.lat,p.lng],{draggable:true,icon:L.divIcon({className:'db-map-pin-wrap',html:'<span class="db-map-pin '+(r.status==='Planned'?'future':'')+'"></span>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
+  marker.bindTooltip(r.code,{permanent:true,direction:'right',offset:[10,0],className:'db-map-label'});
   marker.on('click',()=>setActive(r.code));
-  marker.on('mousedown',()=>{map.dragging.disable()});
-  marker.on('mouseup',()=>map.dragging.enable());
-  marker.on('contextmenu',()=>setActive(r.code));
+  marker.on('dragend',e=>{const ll=e.target.getLatLng();setPositions(old=>({...old,[r.code]:{lat:+ll.lat.toFixed(7),lng:+ll.lng.toFixed(7)}}))});
   layersRef.current[r.code]=marker;
  });
 },[positions]);
