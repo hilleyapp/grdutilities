@@ -19,7 +19,7 @@ useEffect(()=>{
  if(!mapRef.current||mapObj.current)return;
  const map=L.map(mapRef.current,{center:[3.9000,73.4667],zoom:16,zoomControl:true});
  const tomtomKey=import.meta.env.VITE_TOMTOM_API_KEY; if(tomtomKey){L.tileLayer('https://api.tomtom.com/maps/orbis/display/raster/tile/{z}/{x}/{y}?apiVersion=2&style=street-light&key='+encodeURIComponent(tomtomKey),{minZoom:0,maxZoom:22,maxNativeZoom:22,attribution:'&copy; <a href="https://www.tomtom.com/">TomTom</a>'}).addTo(map);}else{L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22,maxNativeZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);}
- map.on('click',async e=>{const code=activeRef.current;await persistCoordinate(code,{lat:+e.latlng.lat.toFixed(7),lng:+e.latlng.lng.toFixed(7)},null,'Map position saved for '+code);setGpsAccuracy(null);setPendingGps(null)});
+ // Map clicks are intentionally non-destructive. GPS changes require explicit GPS save or marker drag.
  mapObj.current=map;
  return()=>{map.remove();mapObj.current=null;layersRef.current={}};
 },[]);
