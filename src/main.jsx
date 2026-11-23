@@ -11,7 +11,7 @@ function App(){const[page,setPage]=useState('Overview'),[query,setQuery]=useStat
 </section></main></div>}
 
 function HouseRegistry(){
- const [connections,setConnections]=useState([]),[boxes,setBoxes]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState(''),[drafts,setDrafts]=useState({}),[saving,setSaving]=useState({}),[adding,setAdding]=useState(false);
+ const [connections,setConnections]=useState([]),[boxes,setBoxes]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState(''),[drafts,setDrafts]=useState({}),[saving,setSaving]=useState({}),[adding,setAdding]=useState(false),[editingId,setEditingId]=useState(null);
  const [newRow,setNewRow]=useState({boxId:'',cableNumber:'',houseName:'',meterNumber:'',accountNumber:''});
  useEffect(()=>{
   let alive=true;
@@ -49,7 +49,10 @@ function HouseRegistry(){
   if(saveError)setError('Could not save '+row.houseName+': '+saveError.message);
   else{const b=boxes.find(x=>x.id===d.boxId);setConnections(old=>old.map(x=>x.id===row.id?{...x,boxId:d.boxId,boxNumber:b?.box_number||x.boxNumber,cableNumber:cable,houseName:d.houseName.trim(),meterNumber:String(d.meterNumber||'').trim(),accountNumber:String(d.accountNumber||'').trim()}:x).sort((a,b)=>a.boxNumber.localeCompare(b.boxNumber,undefined,{numeric:true})||a.cableNumber-b.cableNumber))}
   setSaving(old=>({...old,[row.id]:false}));
+  if(!saveError)setEditingId(null);
  }
+ function startEdit(row){setDrafts(old=>({...old,[row.id]:{boxId:row.boxId,cableNumber:String(row.cableNumber),houseName:row.houseName,meterNumber:row.meterNumber,accountNumber:row.accountNumber}}));setEditingId(row.id);setError('')}
+ function cancelEdit(row){setDrafts(old=>({...old,[row.id]:{boxId:row.boxId,cableNumber:String(row.cableNumber),houseName:row.houseName,meterNumber:row.meterNumber,accountNumber:row.accountNumber}}));setEditingId(null);setError('')}
  async function addRow(){
   if(!newRow.boxId||!String(newRow.cableNumber).trim()||!newRow.houseName.trim()){setError('Box Number, Cable Number and House Name are required.');return}
   const cable=Number(newRow.cableNumber);if(!Number.isInteger(cable)||cable<0){setError('Cable Number must be a whole number of 0 or greater.');return}
@@ -81,13 +84,13 @@ function HouseRegistry(){
    <button className="registry-add-button" disabled={adding} onClick={addRow}>{adding?'Adding…':'＋ Add connection'}</button>
   </div></div>
   {loading?<p className="muted">Loading cable connection records…</p>:<div className="house-table-wrap"><table className="house-table"><thead><tr><th>Box Number</th><th>Cable Number</th><th>House Name</th><th>Meter Number</th><th>Account Number</th><th>Actions</th></tr></thead><tbody>
-   {filtered.map(row=>{const d=drafts[row.id]||{boxId:row.boxId,cableNumber:String(row.cableNumber),houseName:row.houseName,meterNumber:row.meterNumber,accountNumber:row.accountNumber};return <tr key={row.id}>
-    <td><select className="registry-edit-select" aria-label={'Box Number for '+row.houseName} value={d.boxId} onChange={e=>changeDraft(row.id,'boxId',e.target.value)}>{boxes.map(b=><option key={b.id} value={b.id}>{b.box_number}</option>)}</select></td>
-    <td><input className="registry-number-input" aria-label={'Cable Number for '+row.houseName} type="number" min="0" step="1" value={d.cableNumber} onChange={e=>changeDraft(row.id,'cableNumber',e.target.value)}/></td>
-    <td><input className="registry-number-input" aria-label={'House Name for '+row.houseName} value={d.houseName} onChange={e=>changeDraft(row.id,'houseName',e.target.value)}/></td>
-    <td><input className="registry-number-input" aria-label={'Meter Number for '+row.houseName} value={d.meterNumber} placeholder="Meter no." onChange={e=>changeDraft(row.id,'meterNumber',e.target.value)}/></td>
-    <td><input className="registry-number-input" aria-label={'Account Number for '+row.houseName} value={d.accountNumber} placeholder="Account no." onChange={e=>changeDraft(row.id,'accountNumber',e.target.value)}/></td>
-    <td><div className="registry-row-actions"><button className="uploadbtn" disabled={!!saving[row.id]} onClick={()=>saveRow(row)}>{saving[row.id]?'Saving…':'Save'}</button><button className="registry-remove-button" disabled={!!saving[row.id]} onClick={()=>removeRow(row)}>Remove</button></div></td>
+   {filtered.map(row=>{const d=drafts[row.id]||{boxId:row.boxId,cableNumber:String(row.cableNumber),houseName:row.houseName,meterNumber:row.meterNumber,accountNumber:row.accountNumber};const isEditing=editingId===row.id;return <tr key={row.id}>
+    <td>{isEditing?<select className="registry-edit-select" aria-label={'Box Number for '+row.houseName} value={d.boxId} onChange={e=>changeDraft(row.id,'boxId',e.target.value)}>{boxes.map(b=><option key={b.id} value={b.id}>{b.box_number}</option>)}</select>:row.boxNumber}</td>
+    <td>{isEditing?<input className="registry-number-input" aria-label={'Cable Number for '+row.houseName} type="number" min="0" step="1" value={d.cableNumber} onChange={e=>changeDraft(row.id,'cableNumber',e.target.value)}/>:row.cableNumber}</td>
+    <td>{isEditing?<input className="registry-number-input" aria-label={'House Name for '+row.houseName} value={d.houseName} onChange={e=>changeDraft(row.id,'houseName',e.target.value)}/>:row.houseName}</td>
+    <td>{isEditing?<input className="registry-number-input" aria-label={'Meter Number for '+row.houseName} value={d.meterNumber} placeholder="Meter no." onChange={e=>changeDraft(row.id,'meterNumber',e.target.value)}/>:row.meterNumber||'—'}</td>
+    <td>{isEditing?<input className="registry-number-input" aria-label={'Account Number for '+row.houseName} value={d.accountNumber} placeholder="Account no." onChange={e=>changeDraft(row.id,'accountNumber',e.target.value)}/>:row.accountNumber||'—'}</td>
+    <td><div className="registry-row-actions">{isEditing?<><button className="uploadbtn" disabled={!!saving[row.id]} onClick={()=>saveRow(row)}>{saving[row.id]?'Saving…':'Save'}</button><button className="textbutton" disabled={!!saving[row.id]} onClick={()=>cancelEdit(row)}>Cancel</button></>:<button className="uploadbtn" disabled={!!saving[row.id]||editingId!==null} onClick={()=>startEdit(row)}>Edit</button>}<button className="registry-remove-button" disabled={!!saving[row.id]||editingId!==null} onClick={()=>removeRow(row)}>Remove</button></div></td>
    </tr>})}
    {!filtered.length&&<tr><td colSpan="6" className="house-empty">{search?'No cable connections match your search.':'No cable connection records found.'}</td></tr>}
   </tbody></table></div>}
