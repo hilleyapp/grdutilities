@@ -11,12 +11,12 @@ function App(){const[page,setPage]=useState('Overview'),[query,setQuery]=useStat
 </section></main></div>}
 
 function HouseRegistry(){
- const [connections,setConnections]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState('');
+ const [connections,setConnections]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState(''),[drafts,setDrafts]=useState({}),[saving,setSaving]=useState({});
  useEffect(()=>{
   let alive=true;
   const load=async()=>{
    const [{data:cables,error:cableError},{data:boxes,error:boxError}]=await Promise.all([
-    supabase.from('distribution_box_connections').select('id,distribution_box_id,cable_number,house_name').order('distribution_box_id').order('cable_number'),
+    supabase.from('distribution_box_connections').select('id,distribution_box_id,cable_number,house_name,meter_number,account_number').order('distribution_box_id').order('cable_number'),
     supabase.from('distribution_boxes').select('id,box_number')
    ]);
    if(!alive)return;
@@ -24,9 +24,10 @@ function HouseRegistry(){
    if(problem){setError(problem.message||'Could not load the cable register.');setLoading(false);return}
    const boxById=Object.fromEntries((boxes||[]).map(b=>[b.id,b.box_number]));
    const rows=(cables||[]).filter(c=>String(c.house_name||'').trim()&&String(c.house_name).trim()!=='-').map(c=>({
-    id:c.id,boxNumber:boxById[c.distribution_box_id]||'Unmatched box',cableNumber:c.cable_number,houseName:c.house_name
+    id:c.id,boxNumber:boxById[c.distribution_box_id]||'Unmatched box',cableNumber:c.cable_number,houseName:c.house_name,
+    meterNumber:c.meter_number||'',accountNumber:c.account_number||''
    })).sort((a,b)=>a.boxNumber.localeCompare(b.boxNumber,undefined,{numeric:true})||a.cableNumber-b.cableNumber);
-   setConnections(rows);setError('');setLoading(false);
+   setConnections(rows);setDrafts(old=>{const next={...old};rows.forEach(row=>{if(!next[row.id])next[row.id]={meterNumber:row.meterNumber,accountNumber:row.accountNumber}});return next});setError('');setLoading(false);
   };
   load();
   const channel=supabase.channel('house-registry-cable-register')
@@ -35,19 +36,25 @@ function HouseRegistry(){
    .subscribe();
   return()=>{alive=false;supabase.removeChannel(channel)};
  },[]);
- const filtered=useMemo(()=>connections.filter(c=>(c.boxNumber+' '+c.cableNumber+' '+c.houseName).toLowerCase().includes(search.toLowerCase())),[connections,search]);
+ const filtered=useMemo(()=>connections.filter(c=>(c.boxNumber+' '+c.cableNumber+' '+c.houseName+' '+c.meterNumber+' '+c.accountNumber).toLowerCase().includes(search.toLowerCase())),[connections,search]);
  const boxCount=new Set(connections.map(c=>c.boxNumber)).size;
+ async function saveNumbers(row){
+  const draft=drafts[row.id]||{meterNumber:row.meterNumber,accountNumber:row.accountNumber};setSaving(old=>({...old,[row.id]:true}));setError('');
+  const {error:saveError}=await supabase.from('distribution_box_connections').update({meter_number:draft.meterNumber.trim()||null,account_number:draft.accountNumber.trim()||null,updated_at:new Date().toISOString()}).eq('id',row.id);
+  if(saveError){setError('Could not save '+row.houseName+': '+saveError.message)}else{setConnections(old=>old.map(item=>item.id===row.id?{...item,meterNumber:draft.meterNumber.trim(),accountNumber:draft.accountNumber.trim()}:item))}
+  setSaving(old=>({...old,[row.id]:false}));
+ }
  return <div className="house-registry"><section className="panel">
   <div className="panelhead"><div><h2>House registry · cable connections</h2><p>House supply records imported from your uploaded DB network details workbook</p></div><span className="pill">{filtered.length} shown</span></div>
   <div className="house-summary"><div><b>{connections.length}</b><span>House connections</span></div><div><b>{boxCount}</b><span>Distribution boxes</span></div><div><b>{new Set(connections.map(c=>c.houseName.toLowerCase())).size}</b><span>House names</span></div></div>
-  <div className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search box number, cable number or house name"/></div>
-  <p className="house-help">Each row is shown exactly as a cable connection: the distribution box supplying the house, its cable number and the connected house name. A box's physical installation location is recorded separately and is not used as the supply box.</p>
-  {error&&<div className="house-error" role="alert">Could not load cable connection records: {error}</div>}
-  {loading?<p className="muted">Loading cable connection records…</p>:<div className="house-table-wrap"><table className="house-table"><thead><tr><th>Box Number</th><th>Cable Number</th><th>House Name</th></tr></thead><tbody>
-   {filtered.map(c=><tr key={c.id}><td><b>{c.boxNumber}</b></td><td>{c.cableNumber}</td><td><b>{c.houseName}</b></td></tr>)}
-   {!filtered.length&&<tr><td colSpan="3" className="house-empty">{search?'No cable connections match your search.':'No cable connection records found.'}</td></tr>}
+  <div className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search box, cable, house, meter or account number"/></div>
+  <p className="house-help">Enter Meter Number and Account Number for each connected house, then select Save. A box's physical installation location is recorded separately and is not used as the supply box.</p>
+  {error&&<div className="house-error" role="alert">{error}</div>}
+  {loading?<p className="muted">Loading cable connection records…</p>:<div className="house-table-wrap"><table className="house-table"><thead><tr><th>Box Number</th><th>Cable Number</th><th>House Name</th><th>Meter Number</th><th>Account Number</th><th>Action</th></tr></thead><tbody>
+   {filtered.map(c=>{const draft=drafts[c.id]||{meterNumber:c.meterNumber,accountNumber:c.accountNumber};return <tr key={c.id}><td><b>{c.boxNumber}</b></td><td>{c.cableNumber}</td><td><b>{c.houseName}</b></td><td><input className="registry-number-input" aria-label={'Meter Number for '+c.houseName} value={draft.meterNumber} placeholder="Enter meter no." onChange={e=>setDrafts(old=>({...old,[c.id]:{...draft,meterNumber:e.target.value}}))}/></td><td><input className="registry-number-input" aria-label={'Account Number for '+c.houseName} value={draft.accountNumber} placeholder="Enter account no." onChange={e=>setDrafts(old=>({...old,[c.id]:{...draft,accountNumber:e.target.value}}))}/></td><td><button className="uploadbtn" disabled={!!saving[c.id]} onClick={()=>saveNumbers(c)}>{saving[c.id]?'Saving…':'Save'}</button></td></tr>})}
+   {!filtered.length&&<tr><td colSpan="6" className="house-empty">{search?'No cable connections match your search.':'No cable connection records found.'}</td></tr>}
   </tbody></table></div>}
-  <p className="house-footnote">Live shared database · Updates made in Geographical Map → Cable connections appear here automatically.</p>
+  <p className="house-footnote">Live shared database · Meter and account numbers are saved to Supabase and appear across devices.</p>
  </section></div>;
 }
 
