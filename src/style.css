@@ -57,3 +57,6 @@
 .db-remove-area{margin-top:18px;padding-top:13px;border-top:1px solid #edf1f2;text-align:left}
 .db-remove-area .registry-remove-button{background:#fff2f0;color:#ad4d43;border:1px solid #f0d5d1}
 .db-remove-area .db-edit-error{margin-top:9px!important}
+
+.record-installed-house{font-size:10px;color:#258775;font-weight:700;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+@media(max-width:700px){.record-installed-house{max-width:95px;font-size:9px}}
