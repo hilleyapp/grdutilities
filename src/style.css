@@ -37,3 +37,14 @@
 
 .registry-add-panel{margin:14px 0 16px;padding:14px;border:1px solid #dfeae8;border-radius:9px;background:#f8fbfa}.registry-add-panel h3{margin:0 0 12px;color:#31565b;font:700 12px Manrope}.registry-add-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.registry-add-grid label{display:flex;flex-direction:column;gap:5px;color:#71878c;font-size:9px;font-weight:600}.registry-add-grid input,.registry-add-grid select,.registry-edit-select{width:100%;min-width:100px;padding:8px 9px;border:1px solid #dce7e8;border-radius:6px;background:#fff;color:#294953;font:10px 'DM Sans';outline-color:#258f7e}.registry-add-button,.registry-row-actions .uploadbtn,.registry-remove-button{padding:8px 11px;border:0;border-radius:6px;background:#198f7d;color:#fff;font:600 9px 'DM Sans';white-space:nowrap;cursor:pointer;align-self:end}.registry-add-button:disabled,.registry-row-actions button:disabled{opacity:.55;cursor:wait}.registry-row-actions{display:flex;align-items:center;gap:6px}.registry-row-actions .registry-remove-button{background:#fff2f0;color:#ad4d43;border:1px solid #f0d5d1}.registry-edit-select{width:145px}
 @media(max-width:850px){.registry-add-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.registry-add-grid{grid-template-columns:1fr}.registry-add-button{width:100%}.registry-row-actions{flex-direction:column;align-items:stretch}}
+
+.installed-house-field{margin:18px 0 0;padding:13px 14px;border:1px solid #dfeae8;border-radius:8px;background:#f8fbfa;text-align:left}
+.installed-house-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.installed-house-heading small{color:#81959a;font-size:9px;font-weight:700}
+.installed-house-value{display:block;color:#294f57;font-size:12px}
+.edit-installed-house,.installed-house-edit .save-db,.installed-house-edit .cancel-db{border:1px solid #dce8e6;border-radius:6px;padding:7px 10px;background:#f5faf8;color:#258775;font:600 9px 'DM Sans';cursor:pointer}
+.installed-house-edit{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.installed-house-edit input{flex:1;min-width:130px;padding:8px 9px;border:1px solid #dce7e8;border-radius:6px;background:#fff;color:#294953;font:10px 'DM Sans';outline-color:#258f7e}
+.installed-house-edit .save-db{background:#198f7d;color:#fff;border-color:#198f7d}
+.installed-house-edit .cancel-db{color:#73868c;background:#fff}
+.installed-house-edit button:disabled{opacity:.6;cursor:wait}
