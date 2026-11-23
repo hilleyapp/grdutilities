@@ -112,6 +112,7 @@ useEffect(()=>{
  return()=>{map.remove();mapObj.current=null;layersRef.current={}};
 },[]);
 useEffect(()=>{const map=mapObj.current;if(!map)return;const onMapClick=e=>{if(!placementMode)return;setPendingMapPlacement({code:active,lat:+e.latlng.lat.toFixed(7),lng:+e.latlng.lng.toFixed(7)});setPlacementMode(false);setGpsMessage('Map position selected for '+active+'. Review it, then save the position.');};map.on('click',onMapClick);return()=>map.off('click',onMapClick)},[placementMode,active]);
+useEffect(()=>{const map=mapObj.current;if(!map||!pendingMapPlacement)return;const preview=L.marker([pendingMapPlacement.lat,pendingMapPlacement.lng],{interactive:false,icon:L.divIcon({className:'db-map-pin-wrap',html:'<span class="db-map-pin future"></span>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);preview.bindTooltip(pendingMapPlacement.code,{permanent:true,direction:'right',offset:[10,0],className:'db-map-label'});return()=>{map.removeLayer(preview)}},[pendingMapPlacement]);
 useEffect(()=>{
  const map=mapObj.current;if(!map)return;
  Object.values(layersRef.current).forEach(layer=>map.removeLayer(layer));layersRef.current={};
