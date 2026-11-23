@@ -25,7 +25,7 @@ function HouseRegistry(){
    if(problem){setError(problem.message||'Could not load the cable register.');setLoading(false);return}
    setBoxes(boxRows||[]);
    const boxById=Object.fromEntries((boxRows||[]).map(b=>[b.id,b.box_number]));
-   const rows=(cables||[]).filter(c=>String(c.house_name||'').trim()&&String(c.house_name).trim()!=='-').map(c=>({
+   const rows=(cables||[]).filter(c=>String(c.house_name||'').trim()).map(c=>({
     id:c.id,boxId:c.distribution_box_id,boxNumber:boxById[c.distribution_box_id]||'Unmatched box',cableNumber:c.cable_number,houseName:c.house_name,
     meterNumber:c.meter_number||'',accountNumber:c.account_number||''
    })).sort((a,b)=>a.boxNumber.localeCompare(b.boxNumber,undefined,{numeric:true})||a.cableNumber-b.cableNumber);
