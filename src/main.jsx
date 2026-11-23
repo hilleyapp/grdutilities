@@ -11,63 +11,43 @@ function App(){const[page,setPage]=useState('Overview'),[query,setQuery]=useStat
 </section></main></div>}
 
 function HouseRegistry(){
- const [houses,setHouses]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState('');
+ const [connections,setConnections]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState('');
  useEffect(()=>{
   let alive=true;
   const load=async()=>{
-   const [houseResult,boxResult,cableResult]=await Promise.all([
-    supabase.from('connected_houses').select('id,house_number,distribution_box_id,connection_status,address_description,notes').order('house_number'),
-    supabase.from('distribution_boxes').select('id,box_number,installed_house_name'),
-    supabase.from('distribution_box_connections').select('id,cable_number,house_name,distribution_box_id').order('cable_number')
+   const [{data:cables,error:cableError},{data:boxes,error:boxError}]=await Promise.all([
+    supabase.from('distribution_box_connections').select('id,distribution_box_id,cable_number,house_name').order('distribution_box_id').order('cable_number'),
+    supabase.from('distribution_boxes').select('id,box_number')
    ]);
    if(!alive)return;
-   const problem=houseResult.error||boxResult.error||cableResult.error;
-   if(problem){setError(problem.message||'Could not load the house register.');setLoading(false);return}
-   const boxes=boxResult.data||[],byId=Object.fromEntries(boxes.map(b=>[b.id,b]));
-   const norm=value=>String(value||'').trim().toLowerCase().replace(/\\s+/g,' ');
-   const cableByName={};
-   (cableResult.data||[]).forEach(c=>{
-    const box=byId[c.distribution_box_id],key=norm(c.house_name);
-    (cableByName[key]||(cableByName[key]=[])).push({boxNumber:box?.box_number||'Not identified',cableNumber:c.cable_number,sourceName:c.house_name});
-   });
-   const installedByHouse={};
-   boxes.filter(b=>b.installed_house_name).forEach(b=>{
-    const key=norm(b.installed_house_name);
-    (installedByHouse[key]||(installedByHouse[key]=[])).push(b.box_number);
-   });
-   const rows=(houseResult.data||[]).map(h=>{
-    const key=norm(h.house_number);
-    // The workbook spells this one "Crystle Beach"; the user confirmed it is Crystal Beach.
-    const cableMatches=cableByName[key]||(key==='crystal beach'?cableByName['crystle beach']:[])||[];
-    const registeredBox=byId[h.distribution_box_id]?.box_number||'';
-    const supplyBoxes=[...new Set(cableMatches.map(c=>c.boxNumber))];
-    const supplyBox=supplyBoxes.length?supplyBoxes.join(', '):registeredBox;
-    const cableNumbers=cableMatches.length?[...new Set(cableMatches.map(c=>String(c.cableNumber)))].sort((a,b)=>Number(a)-Number(b)).join(', '):'';
-    return {id:h.id,houseName:h.house_number,registeredBox,supplyBox,cableNumbers,installedAt:installedByHouse[key]||[],status:h.connection_status||'Unknown',address:h.address_description||'',notes:h.notes||'',hasCable:cableMatches.length>0};
-   }).sort((a,b)=>a.houseName.localeCompare(b.houseName));
-   setHouses(rows);setError('');setLoading(false);
+   const problem=cableError||boxError;
+   if(problem){setError(problem.message||'Could not load the cable register.');setLoading(false);return}
+   const boxById=Object.fromEntries((boxes||[]).map(b=>[b.id,b.box_number]));
+   const rows=(cables||[]).filter(c=>String(c.house_name||'').trim()&&String(c.house_name).trim()!=='-').map(c=>({
+    id:c.id,boxNumber:boxById[c.distribution_box_id]||'Unmatched box',cableNumber:c.cable_number,houseName:c.house_name
+   })).sort((a,b)=>a.boxNumber.localeCompare(b.boxNumber,undefined,{numeric:true})||a.cableNumber-b.cableNumber);
+   setConnections(rows);setError('');setLoading(false);
   };
   load();
-  const channel=supabase.channel('house-registry-live')
-   .on('postgres_changes',{event:'*',schema:'public',table:'connected_houses'},load)
-   .on('postgres_changes',{event:'*',schema:'public',table:'distribution_boxes'},load)
+  const channel=supabase.channel('house-registry-cable-register')
    .on('postgres_changes',{event:'*',schema:'public',table:'distribution_box_connections'},load)
+   .on('postgres_changes',{event:'*',schema:'public',table:'distribution_boxes'},load)
    .subscribe();
   return()=>{alive=false;supabase.removeChannel(channel)};
  },[]);
- const filtered=useMemo(()=>houses.filter(h=>[h.houseName,h.registeredBox,h.supplyBox,h.cableNumbers,h.installedAt.join(' '),h.status].join(' ').toLowerCase().includes(search.toLowerCase())),[houses,search]);
- const cableCount=houses.filter(h=>h.hasCable).length,installedCount=houses.filter(h=>h.installedAt.length>0).length;
+ const filtered=useMemo(()=>connections.filter(c=>(c.boxNumber+' '+c.cableNumber+' '+c.houseName).toLowerCase().includes(search.toLowerCase())),[connections,search]);
+ const boxCount=new Set(connections.map(c=>c.boxNumber)).size;
  return <div className="house-registry"><section className="panel">
-  <div className="panelhead"><div><h2>Connected house register</h2><p>House names and distribution-box associations from the shared database</p></div><span className="pill">{filtered.length} shown</span></div>
-  <div className="house-summary"><div><b>{houses.length}</b><span>House records</span></div><div><b>{cableCount}</b><span>With cable details</span></div><div><b>{installedCount}</b><span>DB installation locations</span></div></div>
-  <div className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search house name, DB number or cable number"/></div>
-  <p className="house-help">Supply DB and cable number are taken from the cable register where available. “Installed at” identifies the house where a distribution box is physically installed; it is not necessarily the house supplied by that box.</p>
-  {error&&<div className="house-error" role="alert">Could not load house records: {error}</div>}
-  {loading?<p className="muted">Loading connected house records…</p>:<div className="house-table-wrap"><table className="house-table"><thead><tr><th>House name</th><th>Supply DB</th><th>Cable no.</th><th>DB installed at</th><th>Status</th></tr></thead><tbody>
-   {filtered.map(h=><tr key={h.id}><td><b>{h.houseName}</b>{h.address&&<small>{h.address}</small>}</td><td><b>{h.supplyBox||'—'}</b><small>{h.hasCable?'Cable register':h.registeredBox?'House register · cable detail pending':'Not assigned'}</small></td><td>{h.cableNumbers||'—'}</td><td>{h.installedAt.length?h.installedAt.join(', '):'—'}</td><td><span className={h.status==='connected'?'house-status connected':'house-status'}>{h.status}</span></td></tr>)}
-   {!filtered.length&&<tr><td colSpan="5" className="house-empty">{search?'No houses match your search.':'No house records found.'}</td></tr>}
+  <div className="panelhead"><div><h2>House registry · cable connections</h2><p>House supply records imported from your uploaded DB network details workbook</p></div><span className="pill">{filtered.length} shown</span></div>
+  <div className="house-summary"><div><b>{connections.length}</b><span>House connections</span></div><div><b>{boxCount}</b><span>Distribution boxes</span></div><div><b>{new Set(connections.map(c=>c.houseName.toLowerCase())).size}</b><span>House names</span></div></div>
+  <div className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search box number, cable number or house name"/></div>
+  <p className="house-help">Each row is shown exactly as a cable connection: the distribution box supplying the house, its cable number and the connected house name. A box's physical installation location is recorded separately and is not used as the supply box.</p>
+  {error&&<div className="house-error" role="alert">Could not load cable connection records: {error}</div>}
+  {loading?<p className="muted">Loading cable connection records…</p>:<div className="house-table-wrap"><table className="house-table"><thead><tr><th>Box Number</th><th>Cable Number</th><th>House Name</th></tr></thead><tbody>
+   {filtered.map(c=><tr key={c.id}><td><b>{c.boxNumber}</b></td><td>{c.cableNumber}</td><td><b>{c.houseName}</b></td></tr>)}
+   {!filtered.length&&<tr><td colSpan="3" className="house-empty">{search?'No cable connections match your search.':'No cable connection records found.'}</td></tr>}
   </tbody></table></div>}
-  <p className="house-footnote">The house register is read-only in this view. Existing house names, cable connections and GPS/map records remain unchanged.</p>
+  <p className="house-footnote">Live shared database · Updates made in Geographical Map → Cable connections appear here automatically.</p>
  </section></div>;
 }
 
