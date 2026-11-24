@@ -60,3 +60,11 @@
 
 .record-installed-house{font-size:10px;color:#258775;font-weight:700;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
 @media(max-width:700px){.record-installed-house{max-width:95px;font-size:9px}}
+
+/* Utility-level navigation */
+.side .workspace-label{padding-top:20px}
+.utility-switcher{display:grid;gap:6px;margin:0 0 8px}
+.utility-button{width:100%;padding:11px 12px;border:1px solid #294653;border-radius:8px;background:#173746;color:#b6c9cf;text-align:left;font:700 11px 'DM Sans';cursor:pointer}
+.utility-button:hover,.utility-button.active{background:#1c4b55;border-color:#269b88;color:#fff;box-shadow:inset 3px 0 #29b49e}
+.mobile-utility-nav{display:none}
+@media(max-width:700px){.mobile-utility-nav{display:flex;position:sticky;top:0;z-index:1001;gap:6px;padding:8px 10px;background:#102b3a;border-bottom:1px solid #294653}.mobile-utility-item{flex:1;min-width:0;padding:10px 5px;border:1px solid #294653;border-radius:7px;background:transparent;color:#b8cbd1;font:700 10px 'DM Sans';cursor:pointer}.mobile-utility-item.active{background:#1c4b55;border-color:#29b49e;color:#fff}.mobile-nav{top:0;z-index:1000}.mobile-utility-nav+.mobile-nav{top:0}}
