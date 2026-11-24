@@ -1,4 +1,4 @@
-# Guraidhoo Electricity Network
+# Guraidhoo Utility Network Management System
 
 Standalone React + Vite application for Cloudflare Pages.
 
